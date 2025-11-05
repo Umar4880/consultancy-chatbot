@@ -80,8 +80,10 @@ A robust, extensible chatbot platform for consultancy and document writing, leve
    python main.py
    ```
 
-5. **(Optional) Run frontend:**
-   - Open `static/index.html` in your browser, or serve with a simple HTTP server.
+5. ** Run Project:**
+   - Run `cd fewshort_consultancy_chatbot` in terminal.
+   - Run `uvicorn src.main:app --reload` after running first command.
+   - Navigate to `http\\:127.0.0.1:8000` or spedified url to enjoy project.
 
 ### Running Tests
 ```sh
