@@ -8,38 +8,33 @@ let chatSessions = [];
 
 // Initialize session and chat list on load
 
+
 window.onload = async () => {
     // Always ensure userId exists and is persistent
     await initializeUserId();
-
-    sessionId = localStorage.getItem('sessionId');
-    // If sessionId does not exist, create a new session for this user
-    if (!sessionId) {
-        await createAndStoreNewSession();
-    }
+    // On first load, fetch chat list and show branding, but do NOT load any chat automatically.
     await fetchChatSessions();
-    await loadChatHistory();
-
-    // Show branding message if no chat history
-    setTimeout(() => {
-        const chatArea = document.getElementById('chatArea');
-        const branding = document.getElementById('brandingMessage');
-        if (chatArea && branding) {
-            // If chat area is empty (no .message.user or .message.bot except branding), show branding
-            const hasUserOrBotMsg = chatArea.querySelectorAll('.message.user, .message.bot:not(#brandingMessage)').length > 0;
-            branding.style.display = hasUserOrBotMsg ? 'none' : 'flex';
-        }
-    }, 100);
-
+    // Show branding message
+    const chatArea = document.getElementById('chatArea');
+    const branding = document.getElementById('brandingMessage');
+    if (chatArea && branding) {
+        chatArea.innerHTML = '';
+        branding.style.display = 'flex';
+        chatArea.appendChild(branding);
+    }
     // Add event listener for mode change
     const modeSelector = document.getElementById('modeSelector');
     if (modeSelector) {
         modeSelector.addEventListener('change', async () => {
-            console.log('Mode changed to:', modeSelector.value);
-            await loadChatHistory();
-            await fetchChatSessions();
+            if (sessionId) {
+                console.log('Mode changed to:', modeSelector.value);
+                await loadChatHistory();
+                await fetchChatSessions();
+            }
         });
     }
+    // Always render chat list on load
+    renderChatList();
 };
 
 // Initialize userId - create once and keep forever for this browser
@@ -83,7 +78,18 @@ async function createAndStoreNewSession(switchToNew = true) {
                 name: "New Chat"
             });
 
-            // Clear chat area and show branding message
+            // // Clear chat area and show branding message
+            // const chatArea = document.getElementById('chatArea');
+            // if (chatArea) chatArea.innerHTML = '';
+            // const branding = document.getElementById('brandingMessage');
+            // if (branding) {
+            //     branding.style.display = 'flex';
+            //     chatArea.appendChild(branding);
+            // }
+
+            // Render immediately so user sees the new chat
+            renderChatList();
+            // Show branding until user sends a message
             const chatArea = document.getElementById('chatArea');
             if (chatArea) chatArea.innerHTML = '';
             const branding = document.getElementById('brandingMessage');
@@ -91,9 +97,6 @@ async function createAndStoreNewSession(switchToNew = true) {
                 branding.style.display = 'flex';
                 chatArea.appendChild(branding);
             }
-
-            // Render immediately so user sees the new chat
-            renderChatList();
         }
         // Don't fetch all sessions here - just show the immediate update
     } catch (error) {
@@ -106,6 +109,7 @@ async function createAndStoreNewSession(switchToNew = true) {
 // Create a new chat and switch to it in the same window
 async function newSession() {
     await createAndStoreNewSession(true);
+    // Do not load history until user sends a message
 }
 
 // Fetch chat sessions from backend and render chat list
@@ -125,6 +129,8 @@ async function fetchChatSessions() {
         renderChatList();
     } catch (e) {
         console.error('Error fetching chat sessions:', e);
+        // Still render chat list (empty)
+        renderChatList();
     }
 }
 
@@ -145,6 +151,7 @@ function renderChatList() {
 
 
 // Switch to a selected chat session
+
 function switchToChat(idx) {
     const chat = chatSessions[idx];
     if (!chat) return;
@@ -162,6 +169,7 @@ function switchToChat(idx) {
     }
 
     renderChatList();
+    // Only load chat history when user clicks a chat
     loadChatHistory();
 }
 
@@ -198,7 +206,10 @@ async function loadChatHistory() {
         } else {
             // Show branding if no chat
             const branding = document.getElementById('brandingMessage');
-            if (branding) branding.style.display = 'flex';
+            if (branding) {
+                branding.style.display = 'flex';
+                chatArea.appendChild(branding);
+            }
         }
     } catch (e) {
         console.error('Error loading chat history:', e);
@@ -230,7 +241,6 @@ async function sendMessage() {
     
     try {
         const mode = document.getElementById('modeSelector').value;
-        
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
@@ -243,31 +253,34 @@ async function sendMessage() {
                 mode: mode
             })
         });
-        
         if (!response.ok) {
+            console.error('Fetch failed, status:', response.status, 'statusText:', response.statusText);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
-        
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            console.error('Failed to parse JSON from response:', jsonErr);
+            const text = await response.text();
+            console.error('Raw response text:', text);
+            throw new Error('Invalid JSON in response');
+        }
         // Update session info if new session was created
         if (!sessionId) {
             sessionId = data.session_id;
             userId = data.user_id;
-            document.getElementById('sessionId').textContent = sessionId.substring(0, 8) + '...';
+            // Removed buggy line: document.getElementById('sessionId').textContent = sessionId.substring(0, 8) + '...';
         }
-        
         // Remove typing indicator and add bot response
         hideTypingIndicator();
         addMessage(data.response, 'bot');
-        
         // Refresh chat list in case session name was updated (for first messages)
         await fetchChatSessions();
-        
     } catch (error) {
         console.error('Error sending message:', error);
         hideTypingIndicator();
-        addMessage('Sorry, there was an error processing your request. Please try again.', 'bot');
+        addMessage('Sorry, there was an error processing your request. Please try again.\nDetails: ' + error, 'bot');
     } finally {
         sendButton.disabled = false;
         input.focus();
