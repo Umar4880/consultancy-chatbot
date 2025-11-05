@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultancy Chatbot</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <!-- Add marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container row">
+        <div class="header col-4">
+            <h1>Nova Consult</h1>
+            <div class="controls">
+                <span>Consult</span>
+                <button onclick="newSession()">New Chat</button>
+                <button onclick="clearHistory()">Clear History</button>
+            </div>
+            <div class="chat">
+                <span>Chat</span>
+                <div id="chatList" class="chat-list"></div>
+            </div>
+        </div>
+        
+        <div class="content col-8">
+            
+            <div class="chat-area" id="chatArea">
+                <div  id="brandingMessage" class="Welcome-message" style="text-align:center;">
+                    <h1>Welcome to Nova Consult!</h1>
+                    <span>A trust-worthy company to helps you flying into your dream country.</span>
+                    <p>Let's make your dream true together</p>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <select class="mode-selector" id="modeSelector">
+                    <option value="consultant">Consultant Mode</option>
+                    <option value="docs_writer">Docs Writer Mode</option>
+                </select>
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button onclick="sendMessage()" id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
